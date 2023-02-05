@@ -1,0 +1,11 @@
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\bin\Debug\WindowsFormsAppSH2.exe.config
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\bin\Debug\WindowsFormsAppSH2.exe
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\bin\Debug\WindowsFormsAppSH2.pdb
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.csproj.AssemblyReference.cache
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.csproj.SuggestedBindingRedirects.cache
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.Form1.resources
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.Properties.Resources.resources
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.csproj.GenerateResource.cache
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.csproj.CoreCompileInputs.cache
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.exe
+C:\Users\starc\source\repos\WindowsFormsAppSH2\WindowsFormsAppSH2\obj\Debug\WindowsFormsAppSH2.pdb
