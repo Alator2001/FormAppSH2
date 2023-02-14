@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
@@ -14,54 +15,59 @@ using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-
-
+using System.Net.Configuration;
+using System.Diagnostics.Contracts;
+using System.Data.SqlTypes;
+using System.Reflection;
 
 namespace WindowsFormsAppSH2
 {
 
     public partial class Form1 : Form
     {
+        readonly string defpath = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
+        string path = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
+
+        const int sizeBufferRecord = 256;
 
         bool isConnected = false;
         bool readingFlag = false;
         bool plotFlag = false;
 
-        private int _countSeconds = 0;
-        string defpath = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
-        string path = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
+        string[] bufferRecord = new string[sizeBufferRecord];
+        string[] bufferLive = new string[sizeBufferRecord];
 
+        private int _countBuffer = 0;
+        private int _countSeconds = 0;
+
+        double min = double.MaxValue;
+        double max = double.MinValue;
         public Form1()
         {
             InitializeComponent();
             StartPosition = FormStartPosition.CenterScreen;
         }
 
-        private void button1_Click(object sender, EventArgs e) //Обновление списка портов
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void timer2_Tick(object sender, EventArgs e) // Список COM портов
         {
             comboBox1.Items.Clear();
             // Получаем список COM портов доступных в системе
             string[] portnames = SerialPort.GetPortNames();
-            // Проверяем есть ли доступные
-            if (portnames.Length == 0)
-            {
-                MessageBox.Show("COM PORT not found");
-            }
             foreach (string portName in portnames)
             {
                 //добавляем доступные COM порты в список           
                 comboBox1.Items.Add(portName);
-                Console.WriteLine(portnames.Length);
+                //Console.WriteLine(portnames.Length);
                 if (portnames[0] != null)
                 {
                     comboBox1.SelectedItem = portnames[0];
                 }
             }
-        }
-
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
         }
 
         private void button2_Click(object sender, EventArgs e) // Статус подключения
@@ -132,25 +138,42 @@ namespace WindowsFormsAppSH2
             }
         }
 
+
         private void readingClick()
         {
             readingFlag = true;
             string msg = "|";
-            File.AppendAllText(defpath, Environment.NewLine +  msg + Environment.NewLine);
+            File.AppendAllText(defpath, Environment.NewLine + msg + Environment.NewLine);
+            _countBuffer = 0;
             while (readingFlag)
             {
                 msg = serialPort1.ReadLine();
-                File.AppendAllText(defpath, msg);
+                try
+                {
+                    string[] values = msg.Split('\t');
+                    Convert.ToDouble(values[0]);
+                    Convert.ToDouble(values[1]);
+                    bufferRecord[_countBuffer] = msg;
+                    bufferLive[_countBuffer] = msg;
+                    File.AppendAllText(defpath, bufferRecord[_countBuffer]);
+                    _countBuffer++;
+                    if (_countBuffer == sizeBufferRecord)
+                    {
+                        _countBuffer = 0;
+                    }
+                }
+                catch
+                {
+                    continue;
+                }
             }
         }
 
 
         private void button4_Click(object sender, EventArgs e) // построение графика
         {
-            
             this.chart1.Series[0].Points.Clear();
             string[] msg = File.ReadAllLines(path);
-            double[] msgs = new double[msg.Length];
             int j = 0;
             for (int i = 0; i < msg.Length; i++)
             {
@@ -160,17 +183,15 @@ namespace WindowsFormsAppSH2
                 }
                 else
                 {
-                    try
-                    {
-                        msgs[j] = Convert.ToDouble(msg[i]);
-                        this.chart1.Series[0].Points.AddXY(j, msg[i]);
-                        j++;
-                    }
-                    catch
-                    {
-                        continue;
-                    }
+                    string[] values = msg[i].Split('\t');
+                    СomparePlot(values[1]);
+                    this.chart1.Series[0].Points.AddXY(j, values[1]);
+                    j++;
                 }
+            }
+            if (min != double.MaxValue && max != double.MinValue)
+            {
+                textBox6.Text ="MIN:" + min + " " + "MAX:" + max;
             }
             Avr();
         }
@@ -201,20 +222,23 @@ namespace WindowsFormsAppSH2
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            try
-            {
-                string check = File.ReadAllLines(defpath).Last();
-                Convert.ToDouble(check);
-            }
-            catch
+            DateTime timeNow = DateTime.Now;
+            if (bufferLive[0] == null)
             {
                 return;
             }
-            string msg = File.ReadAllLines(defpath).Last();
-            DateTime timeNow = DateTime.Now;
-            chart2.Series[0].Points.AddXY(timeNow, msg);
+            if (_countBuffer == 0)
+            {
+                string[] values = bufferLive[sizeBufferRecord - 1].Split('\t');
+                chart2.Series[0].Points.AddXY(timeNow, values[1]);
+            }
+            else
+            {
+                string[] values = bufferLive[_countBuffer - 1].Split('\t');
+                chart2.Series[0].Points.AddXY(timeNow, values[1]);
+            }
             _countSeconds++;
-            if (_countSeconds == 60)
+            if (_countSeconds == 600)
             {
                 _countSeconds = 0;
                 chart2.ChartAreas[0].AxisX.Minimum = DateTime.Now.ToOADate();
@@ -222,11 +246,15 @@ namespace WindowsFormsAppSH2
                 chart2.ChartAreas[0].AxisX.IntervalType = DateTimeIntervalType.Seconds;
                 chart2.ChartAreas[0].AxisX.Interval = 5;
             }
-           
         }
+
+
 
         private void button6_Click(object sender, EventArgs e) //Open File
         {
+            openFileDialog1.Filter = "txt files (*.txt)|*.txt|All files (*.*)|*.*";
+            openFileDialog1.FilterIndex = 1;
+            openFileDialog1.RestoreDirectory = true;
             if (openFileDialog1.ShowDialog()==DialogResult.OK)
             {
                 path = openFileDialog1.FileName;
@@ -256,60 +284,7 @@ namespace WindowsFormsAppSH2
             }
         }
 
-        //private void Avr() //Average
-        //{
-        //    int sizeWindow = Convert.ToInt32(textBox3.Text);
-        //    this.chart1.Series[1].Points.Clear();
-        //    double[] arrWindow = new double[sizeWindow];
-        //    string[] msgs = File.ReadAllLines(path);
-        //    double[] msg = msgs.Where(x => double.TryParse(x, out _)).Select(x => double.Parse(x)).ToArray();
-        //    for (int i = 0; i < msg.Length; i++)
-        //    {
-        //        for (int j = 0; j < sizeWindow - 1; j++)
-        //        {
-        //            arrWindow[j] = arrWindow[j + 1];
-        //        }
-        //        arrWindow[sizeWindow - 1] = msg[i];
-        //        double avr = Math.Sqrt(arrWindow.Sum(x => x * x) / sizeWindow);
-        //        this.chart1.Series[1].Points.AddXY(i, avr);
-        //    }
-        //}
-
-        //private void Avr()
-        //{
-        //    int sizeWindow = Convert.ToInt32(textBox3.Text);
-        //    this.chart1.Series[1].Points.Clear();
-        //    double[] arrWindow = new double[sizeWindow];
-        //    string[] msgs = File.ReadAllLines(path);
-        //    double sum = 0;
-        //    int k = 0;
-        //    for (int i = 0; i < msgs.Length; i++)
-        //    {
-        //        if (msgs[i] == "|" || msgs[i] == "")
-        //        {
-        //            continue;
-        //        }
-        //        double msg;
-        //        if (double.TryParse(msgs[i], out msg))
-        //        {
-        //            sum += msg * msg;
-        //            k++;
-        //            if (k >= sizeWindow)
-        //            {
-        //                double avr = Math.Sqrt(sum / sizeWindow);
-        //                this.chart1.Series[1].Points.AddXY(i - sizeWindow + 1, avr);
-        //                sum -= arrWindow[k % sizeWindow] * arrWindow[k % sizeWindow];
-        //            }
-        //            arrWindow[k % sizeWindow] = msg;
-        //        }
-        //    }
-        //}
-
-
-
-
-
-        private void Avr()
+        private void Avr() //Avarage
         {
             try 
             { 
@@ -323,18 +298,19 @@ namespace WindowsFormsAppSH2
             uint sizeWindow = Convert.ToUInt32(textBox3.Text);
             this.chart1.Series[1].Points.Clear();
             double[] arrWindow = new double[sizeWindow];
-            string[] msgs = File.ReadAllLines(path);
-            double[] msg = new double[msgs.Length];
+            string[] msg = File.ReadAllLines(path);
+            double[] msgs = new double[msg.Length];
             int k = 0;
-            for (int i = 0; i < msgs.Length; i++)
+            for (int i = 0; i < msg.Length; i++)
             {
                 try
                 {
-                    if (msgs[i] == "|" || msgs[i] == "")
+                    if (msg[i] == "|" || msg[i] == "")
                     {
                         continue;
                     }
-                    msg[k] = Convert.ToDouble(msgs[i]);
+                    string[] values = msg[i].Split('\t');
+                    msgs[k] = Convert.ToDouble(values[1]);
                     k++;
                 }
                 catch
@@ -348,7 +324,7 @@ namespace WindowsFormsAppSH2
                 {
                     if (j == sizeWindow - 1)
                     {
-                        arrWindow[j] = msg[i];
+                        arrWindow[j] = msgs[i];
                     }
                     else
                     {
@@ -367,6 +343,34 @@ namespace WindowsFormsAppSH2
         }
 
 
+        private void СomparePlot(string msg) //Сompare
+        {
+            double msgs = Convert.ToDouble(msg);
+            if (msgs>max)
+            {
+                max = msgs;
+            }
+            if (msgs<min)
+            {
+                min = msgs;
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e) //Clear all data
+        {
+            File.WriteAllText(defpath, string.Empty);
+            min = double.MaxValue;
+            max = double.MinValue;
+        }
+
+        private void button8_Click(object sender, EventArgs e) //Full Screen
+        {
+            Form2 formF = new Form2();
+            formF.WindowState = FormWindowState.Maximized;
+            //formF.chart1.Dock = DockStyle.Fill;
+            formF.Show();
+            
+        }
     }
 }
 
