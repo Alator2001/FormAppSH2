@@ -20,3 +20,15 @@ C:\Users\starc\Documents\GitHub\FormAppSH2\WindowsFormsAppSH2\obj\Release\Window
 C:\Users\starc\Documents\GitHub\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.csproj.CoreCompileInputs.cache
 C:\Users\starc\Documents\GitHub\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.exe
 C:\Users\starc\Documents\GitHub\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.pdb
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\bin\Release\WindowsFormsAppSH2.exe.config
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\bin\Release\WindowsFormsAppSH2.exe
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\bin\Release\WindowsFormsAppSH2.pdb
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.csproj.AssemblyReference.cache
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.csproj.SuggestedBindingRedirects.cache
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.Form1.resources
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.Form2.resources
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.Properties.Resources.resources
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.csproj.GenerateResource.cache
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.csproj.CoreCompileInputs.cache
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.exe
+D:\олд\source\diplom\FormAppSH2\WindowsFormsAppSH2\obj\Release\WindowsFormsAppSH2.pdb

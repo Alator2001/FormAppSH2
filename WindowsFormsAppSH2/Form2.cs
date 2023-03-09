@@ -15,8 +15,8 @@ namespace WindowsFormsAppSH2
     public partial class Form2 : Form
     {
 
-        readonly string defpath = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
-        string path = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
+        readonly string defpath = "D:\\олд\\source\\diplom\\FormAppSH2\\data.txt";
+        string path = "D:\\олд\\source\\diplom\\FormAppSH2\\data.txt";
 
         double min = double.MaxValue;
         double max = double.MinValue;
@@ -31,7 +31,7 @@ namespace WindowsFormsAppSH2
             this.chart1.Series[0].Points.Clear();
             string[] msg = File.ReadAllLines(path);
             int j = 0;
-            for (int i = 0; i < msg.Length; i++)
+            for (int i = 1; i < msg.Length; i++)
             {
                 if (msg[i] == "" || msg[i] == "|")
                 {

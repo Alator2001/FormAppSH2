@@ -19,29 +19,38 @@ using System.Net.Configuration;
 using System.Diagnostics.Contracts;
 using System.Data.SqlTypes;
 using System.Reflection;
+using System.Xml.Serialization;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
+using System.Windows.Markup;
 
 namespace WindowsFormsAppSH2
 {
 
     public partial class Form1 : Form
     {
-        readonly string defpath = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
-        string path = "C:\\Users\\starc\\source\\repos\\WindowsFormsAppSH2\\data.txt";
+        readonly string defpath = "D:\\олд\\source\\diplom\\FormAppSH2\\data.txt";
+        string path = "D:\\олд\\source\\diplom\\FormAppSH2\\data.txt";
 
         const int sizeBufferRecord = 256;
 
+        bool filterFlag = false;
         bool isConnected = false;
         bool readingFlag = false;
         bool plotFlag = false;
+        bool errorFlag = false;
+        bool mouseMoveFlag = false;
 
-        string[] bufferRecord = new string[sizeBufferRecord];
         string[] bufferLive = new string[sizeBufferRecord];
 
         private int _countBuffer = 0;
         private int _countSeconds = 0;
+        private int _countSumTicks = 0;
 
         double min = double.MaxValue;
         double max = double.MinValue;
+
+
         public Form1()
         {
             InitializeComponent();
@@ -55,6 +64,12 @@ namespace WindowsFormsAppSH2
 
         private void timer2_Tick(object sender, EventArgs e) // Список COM портов
         {
+            if (isConnected && !serialPort1.IsOpen)
+            {
+                disconnectFromBoard();
+                errorFlag = true;
+                Invoke(new Action(() => callError()));
+            }
             comboBox1.Items.Clear();
             // Получаем список COM портов доступных в системе
             string[] portnames = SerialPort.GetPortNames();
@@ -78,8 +93,10 @@ namespace WindowsFormsAppSH2
             }
             else
             {
-                disconnectFromBoard();
+                readingFlag = false;
+                disconnectFromBoard();                  
             }
+            
         }
 
         private void сonnectToBoard()
@@ -138,28 +155,36 @@ namespace WindowsFormsAppSH2
             }
         }
 
-
         private void readingClick()
         {
+            string msg;
+            long fileSize = new FileInfo(defpath).Length;
+            if (fileSize == 0)
+            {
+                msg = "Время[c]\tОборт/мин\tdelta[V2-V1]\tКрутящий момент[Нм]\tМощность\n";
+                File.AppendAllText(defpath, msg);
+            }
             readingFlag = true;
-            string msg = "|";
+            msg = "|";
             File.AppendAllText(defpath, Environment.NewLine + msg + Environment.NewLine);
             _countBuffer = 0;
             while (readingFlag)
             {
-                msg = serialPort1.ReadLine();
                 try
                 {
-                    string[] values = msg.Split('\t');
-                    Convert.ToDouble(values[0]);
-                    Convert.ToDouble(values[1]);
-                    bufferRecord[_countBuffer] = msg;
-                    bufferLive[_countBuffer] = msg;
-                    File.AppendAllText(defpath, bufferRecord[_countBuffer]);
-                    _countBuffer++;
-                    if (_countBuffer == sizeBufferRecord)
+                    msg = serialPort1.ReadLine();
+                    int ticks = Convert.ToInt32(msg);
+                    if (filterFlag)
                     {
-                        _countBuffer = 0;
+                        if (60 / (ticks * 0.0001) >= Convert.ToInt32(textBox16.Text) && 
+                            60 / (ticks * 0.0001) <= Convert.ToInt32(textBox17.Text))
+                        {
+                            calculat(ticks);
+                        }
+                    }
+                    else
+                    {
+                        calculat(ticks);
                     }
                 }
                 catch
@@ -169,13 +194,81 @@ namespace WindowsFormsAppSH2
             }
         }
 
+        double sumTTime;
+        double tTime;
+        int V;
+        double V1;
+        double V2;
+        double deltaV;
+        double M;
+        double P;
+
+        private void calculat(double Ticks)
+        {
+            string msg;
+            tTime = Ticks * Math.Pow(10, -4);
+            V = Convert.ToInt32(60 / (Ticks * 0.0001));
+            if (_countSumTicks == 2)
+            {
+                V2 = V;
+                deltaV = V2 - V1;
+                V1 = V2;
+                M = (deltaV * 0.065) / (sumTTime * 10);
+                M = Math.Round(M, 2);
+                P = M * (V2 / 10);
+                P = Math.Round(P, 2);
+                //LS = P / 735.49875;
+                msg = Convert.ToString(tTime) + "\t" +
+                      Convert.ToString(V) + "\t" +
+                      Convert.ToString(deltaV) + "\t" +
+                      Convert.ToString(M) + "\t" +
+                      Convert.ToString(P) + "\n";
+                bufferLive[_countBuffer] = msg;
+                _countBuffer++;
+                if (_countBuffer == sizeBufferRecord)
+                {
+                    _countBuffer = 0;
+                }
+                File.AppendAllText(defpath, msg);
+                sumTTime = 0;
+                _countSumTicks = 0;
+            }
+            else
+            {
+                msg = Convert.ToString(tTime) + "\t" + Convert.ToString(V) + "\n";
+                bufferLive[_countBuffer] = msg;
+                _countBuffer++;
+                if (_countBuffer == sizeBufferRecord)
+                {
+                    _countBuffer = 0;
+                }
+                File.AppendAllText(defpath, msg);
+                sumTTime += tTime;
+                _countSumTicks++;
+            }
+        }
+
+
+        private void callError()
+        {
+            readingFlag = false;
+            MessageBox.Show("Device disconnect, file writing stopped");
+            button3.Text = "Write to file";
+        }
+
 
         private void button4_Click(object sender, EventArgs e) // построение графика
         {
             this.chart1.Series[0].Points.Clear();
+            this.chart1.Series[2].Points.Clear();
+            chart1.ChartAreas[0].AxisX.Title = "Частота вращения коленвала, об/мин";
+            chart1.ChartAreas[0].AxisY.Title = "Крутящий момент, Нм";
+            chart1.ChartAreas[0].AxisY2.Title = "Мощность";
+            chart1.ChartAreas[0].AxisY2.Enabled = AxisEnabled.True;
+            chart1.Series[2].YAxisType = AxisType.Secondary;
             string[] msg = File.ReadAllLines(path);
             int j = 0;
-            for (int i = 0; i < msg.Length; i++)
+            for (int i = 1; i < msg.Length; i++)
             {
                 if (msg[i] == "" || msg[i] == "|")
                 {
@@ -185,7 +278,15 @@ namespace WindowsFormsAppSH2
                 {
                     string[] values = msg[i].Split('\t');
                     СomparePlot(values[1]);
-                    this.chart1.Series[0].Points.AddXY(j, values[1]);
+                    if (values.Length > 2)
+                    {
+                        if (Convert.ToDouble(values[3]) > 0)
+                        {
+                            this.chart1.Series[0].Points.AddXY(values[1], values[3]);
+                            this.chart1.Series[2].Points.AddXY(values[1], values[4]);
+                        }
+                        j++;
+                    }
                     j++;
                 }
             }
@@ -193,7 +294,9 @@ namespace WindowsFormsAppSH2
             {
                 textBox6.Text ="MIN:" + min + " " + "MAX:" + max;
             }
-            Avr();
+            //Avr();
+            mouseMoveFlag = true;
+
         }
 
         private void button5_Click(object sender, EventArgs e) // Live Plot
@@ -222,6 +325,14 @@ namespace WindowsFormsAppSH2
 
         private void timer1_Tick(object sender, EventArgs e)
         {
+            if (errorFlag)
+            {
+                errorFlag = false;
+                plotFlag = false;
+                timer1.Enabled = false;
+                button5.Text = "Live Plot";
+                return;
+            }
             DateTime timeNow = DateTime.Now;
             if (bufferLive[0] == null)
             {
@@ -229,8 +340,7 @@ namespace WindowsFormsAppSH2
             }
             if (_countBuffer == 0)
             {
-                string[] values = bufferLive[sizeBufferRecord - 1].Split('\t');
-                chart2.Series[0].Points.AddXY(timeNow, values[1]);
+                return;
             }
             else
             {
@@ -361,6 +471,7 @@ namespace WindowsFormsAppSH2
             File.WriteAllText(defpath, string.Empty);
             min = double.MaxValue;
             max = double.MinValue;
+            mouseMoveFlag = false;
         }
 
         private void button8_Click(object sender, EventArgs e) //Full Screen
@@ -370,6 +481,42 @@ namespace WindowsFormsAppSH2
             //formF.chart1.Dock = DockStyle.Fill;
             formF.Show();
             
+        }
+
+        private void chart1_MouseMove(object sender, MouseEventArgs e)  //Координаты
+        {
+            if (mouseMoveFlag)
+            {
+                chart1.Invalidate();
+                ChartArea chartArea = chart1.ChartAreas[0];
+                double xValue = chartArea.AxisX.PixelPositionToValue(e.Location.X);
+                double yValue = chartArea.AxisY.PixelPositionToValue(e.Location.Y);
+                textBox7.Text = $"X: {xValue.ToString("0")}, Y: {yValue.ToString("0")}";
+            }
+        }
+
+        private void button9_Click(object sender, EventArgs e) //Zoom
+        {
+            int y1 = Convert.ToInt32(textBox12.Text);
+            int y2 = Convert.ToInt32(textBox13.Text);
+            int x1 = Convert.ToInt32(textBox10.Text);
+            int x2 = Convert.ToInt32(textBox11.Text);
+            chart1.ChartAreas[0].AxisX.ScaleView.Zoom(x1, x2);
+            chart1.ChartAreas[0].AxisY.ScaleView.Zoom(y1, y2);
+        }
+
+        private void button11_Click(object sender, EventArgs e)
+        {
+            if (filterFlag)
+            {
+                filterFlag = false;
+                button11.Text = "Filter: OFF";
+            }
+            else
+            {
+                filterFlag = true;
+                button11.Text = "Filter: ON";
+            }
         }
     }
 }
